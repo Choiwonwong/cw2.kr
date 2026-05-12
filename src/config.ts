@@ -2,6 +2,7 @@ export type AppConfig = {
   port: number;
   host: string;
   version: string;
+  databasePath: string;
 };
 
 function readPort(value: string | undefined): number {
@@ -22,6 +23,7 @@ export function loadConfig(): AppConfig {
   return {
     port: readPort(process.env.PORT),
     host: process.env.HOST ?? "127.0.0.1",
-    version: "1.0.0"
+    version: "1.0.0",
+    databasePath: process.env.DATABASE_PATH ?? "./data/cw2.db"
   };
 }
