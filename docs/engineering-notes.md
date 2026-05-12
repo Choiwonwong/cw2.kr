@@ -52,6 +52,20 @@ Class-based repositories/services can be reconsidered later if:
 
 Until then, class usage is optional rather than required.
 
+## Service Layer Policy
+
+Service modules coordinate repositories and business rules.
+
+For v1, the scrape service owns:
+
+- creating a scrape run before scraper execution
+- storing newly discovered housing posts
+- counting found, new, and duplicate posts for runtime results
+- marking scrape runs as success or failed
+- calculating source health from recent run history
+
+Route handlers and future CLI commands should call services instead of coordinating repositories directly.
+
 ## Test Placement
 
 Unit and small integration-style tests may live next to the implementation file:
