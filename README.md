@@ -53,6 +53,10 @@ EC2
    └─ data/cw2.db
 ```
 
+## Documentation
+
+- [Database schema](docs/schema.md)
+
 ## Local Development
 
 > This project is in the initial setup phase. The commands below will be updated as the application structure is added.
