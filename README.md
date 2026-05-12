@@ -4,6 +4,10 @@ Personal infrastructure project for [`cw2.kr`](https://cw2.kr).
 
 This repository starts as a small internal dashboard and scraper for tracking public housing subscription announcements. It is built as a learning-oriented Node.js/TypeScript project with a focus on simplicity, clean structure, and maintainable operations.
 
+## Version
+
+Current planned app version: `1.0.0`
+
 ## Goals
 
 - Scrape public housing announcement pages on a regular schedule
@@ -55,6 +59,7 @@ EC2
 
 ## Documentation
 
+- [Product scope v1](docs/product-v1.md)
 - [Database schema](docs/schema.md)
 
 ## Local Development

@@ -2,6 +2,8 @@
 
 This project uses SQLite as a local runtime database. The database file is runtime data and must not be committed to Git.
 
+Schema target app version: `1.0.0`
+
 ## ERD
 
 ```mermaid
