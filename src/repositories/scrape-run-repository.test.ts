@@ -1,0 +1,77 @@
+import assert from "node:assert/strict";
+import { afterEach, beforeEach, describe, it } from "node:test";
+
+import { createTestDatabase } from "../test/database.js";
+import type { DatabaseConnection } from "../db/connection.js";
+import { createScrapeRunRepository } from "./scrape-run-repository.js";
+import { createScrapeSourceRepository } from "./scrape-source-repository.js";
+
+let database: DatabaseConnection;
+
+beforeEach(() => {
+  database = createTestDatabase();
+});
+
+afterEach(() => {
+  database.close();
+});
+
+describe("scrape run repository", () => {
+  it("creates a running scrape run", () => {
+    const sourceRepository = createScrapeSourceRepository(database);
+    const runRepository = createScrapeRunRepository(database);
+    const source = sourceRepository.create({ name: "source", url: "https://example.com" });
+
+    const run = runRepository.create(source.id);
+
+    assert.equal(run.id, 1);
+    assert.equal(run.sourceId, source.id);
+    assert.equal(run.status, "running");
+    assert.equal(run.errorMessage, null);
+    assert.equal(typeof run.startedAt, "string");
+    assert.equal(run.finishedAt, null);
+  });
+
+  it("marks a run as success", () => {
+    const sourceRepository = createScrapeSourceRepository(database);
+    const runRepository = createScrapeRunRepository(database);
+    const source = sourceRepository.create({ name: "source", url: "https://example.com" });
+    const run = runRepository.create(source.id);
+
+    const updated = runRepository.markSuccess(run.id);
+
+    assert.equal(updated.status, "success");
+    assert.equal(updated.errorMessage, null);
+    assert.equal(typeof updated.finishedAt, "string");
+  });
+
+  it("marks a run as failed with an error message", () => {
+    const sourceRepository = createScrapeSourceRepository(database);
+    const runRepository = createScrapeRunRepository(database);
+    const source = sourceRepository.create({ name: "source", url: "https://example.com" });
+    const run = runRepository.create(source.id);
+
+    const updated = runRepository.markFailed(run.id, "Network timeout");
+
+    assert.equal(updated.status, "failed");
+    assert.equal(updated.errorMessage, "Network timeout");
+    assert.equal(typeof updated.finishedAt, "string");
+  });
+
+  it("finds recent runs for a source", () => {
+    const sourceRepository = createScrapeSourceRepository(database);
+    const runRepository = createScrapeRunRepository(database);
+    const source = sourceRepository.create({ name: "source", url: "https://example.com" });
+
+    const first = runRepository.create(source.id);
+    const second = runRepository.create(source.id);
+
+    const runs = runRepository.findRecentBySource(source.id, 1);
+
+    assert.deepEqual(
+      runs.map((run) => run.id),
+      [second.id]
+    );
+    assert.notEqual(first.id, second.id);
+  });
+});

@@ -62,6 +62,7 @@ EC2
 - [Product scope v1](docs/product-v1.md)
 - [Database schema](docs/schema.md)
 - [Database driver decision](docs/database-driver.md)
+- [Engineering notes](docs/engineering-notes.md)
 - [package.json guide](docs/package-json.md)
 
 ## Local Development

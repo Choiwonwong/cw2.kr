@@ -38,7 +38,10 @@
     "start": "node dist/server.js",
 
     // Check TypeScript types without generating dist/ output.
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+
+    // Run Node.js built-in tests with tsx so .ts test files can execute directly.
+    "test": "node --import tsx --test \"src/**/*.test.ts\""
   },
 
   // Search/discovery labels. These are mostly documentation metadata.
@@ -102,6 +105,7 @@ Most common commands:
 
 ```bash
 npm run dev
+npm test
 npm run typecheck
 npm run build
 npm start
