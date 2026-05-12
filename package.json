@@ -1,0 +1,30 @@
+{
+  "name": "cw2.kr",
+  "version": "1.0.0",
+  "description": "Personal infrastructure and service dashboard for cw2.kr",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "keywords": [
+    "personal-infrastructure",
+    "dashboard",
+    "scraper",
+    "fastify",
+    "sqlite"
+  ],
+  "author": "",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "fastify": "^5.6.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
