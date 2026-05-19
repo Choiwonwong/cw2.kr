@@ -74,6 +74,12 @@ npm install
 npm run dev
 ```
 
+Send a standalone Discord alert to verify webhook configuration:
+
+```bash
+DISCORD_WEBHOOK_URL=... npm run alert:test
+```
+
 ## Environment Variables
 
 Create `.env` from `.env.example` when the application scaffold is ready.

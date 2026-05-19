@@ -64,6 +64,7 @@ export type HousingPostRepository = {
   findRecent(limit: number): HousingPost[];
   markChecked(id: number): HousingPost;
   markSubmitted(id: number): HousingPost;
+  markNotified(id: number): HousingPost;
 };
 
 function toHousingPost(row: HousingPostRow): HousingPost {
@@ -147,6 +148,12 @@ export function createHousingPostRepository(
     WHERE id = ?
   `);
 
+  const markNotifiedStatement = database.prepare(`
+    UPDATE scraped_housing_posts
+    SET notified_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `);
+
   function requirePost(id: number): HousingPost {
     const post = findByIdStatement.get(id);
 
@@ -208,6 +215,12 @@ export function createHousingPostRepository(
 
     markSubmitted(id) {
       markSubmittedStatement.run(id);
+
+      return requirePost(id);
+    },
+
+    markNotified(id) {
+      markNotifiedStatement.run(id);
 
       return requirePost(id);
     }

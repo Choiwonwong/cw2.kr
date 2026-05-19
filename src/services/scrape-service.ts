@@ -8,6 +8,7 @@ import type {
   ScrapeRunRepository
 } from "../repositories/scrape-run-repository.js";
 import type { ScrapeSourceRepository } from "../repositories/scrape-source-repository.js";
+import type { HousingPostNotifier } from "../notifications/housing-post-notifier.js";
 
 export type ScrapedHousingPost = Omit<
   InsertHousingPostInput,
@@ -25,6 +26,10 @@ export type ScrapeServiceRepositories = {
   sources: ScrapeSourceRepository;
   runs: ScrapeRunRepository;
   housingPosts: HousingPostRepository;
+};
+
+export type ScrapeServiceOptions = {
+  notifier?: HousingPostNotifier;
 };
 
 export type ScrapeServiceRunResult = {
@@ -74,7 +79,8 @@ function calculateSourceHealth(recentRuns: ScrapeRun[]): SourceHealth {
 }
 
 export function createScrapeService(
-  repositories: ScrapeServiceRepositories
+  repositories: ScrapeServiceRepositories,
+  options: ScrapeServiceOptions = {}
 ): ScrapeService {
   return {
     async runHousingScraper(scraper) {
@@ -97,6 +103,10 @@ export function createScrapeService(
           } else {
             duplicateCount += 1;
           }
+        }
+
+        if (options.notifier) {
+          await options.notifier.notifyNewPosts(newPosts);
         }
 
         const finishedRun = repositories.runs.markSuccess(run.id);

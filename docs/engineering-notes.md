@@ -66,6 +66,20 @@ For v1, the scrape service owns:
 
 Route handlers and future CLI commands should call services instead of coordinating repositories directly.
 
+## Notification Adapter Policy
+
+Outbound alerts go through a small adapter boundary.
+
+For Discord, the app uses:
+
+```ts
+createDiscordWebhookAdapter({ webhookUrl })
+```
+
+Services depend on the generic notification adapter shape instead of `fetch`
+directly. Tests can pass an in-memory adapter that records messages, while
+runtime scripts can use the real Discord webhook adapter.
+
 ## Test Placement
 
 Unit and small integration-style tests may live next to the implementation file:

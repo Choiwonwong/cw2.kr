@@ -3,6 +3,7 @@ export type AppConfig = {
   host: string;
   version: string;
   databasePath: string;
+  discordWebhookUrl: string | null;
 };
 
 function readPort(value: string | undefined): number {
@@ -24,6 +25,7 @@ export function loadConfig(): AppConfig {
     port: readPort(process.env.PORT),
     host: process.env.HOST ?? "127.0.0.1",
     version: "1.0.0",
-    databasePath: process.env.DATABASE_PATH ?? "./data/cw2.db"
+    databasePath: process.env.DATABASE_PATH ?? "./data/cw2.db",
+    discordWebhookUrl: process.env.DISCORD_WEBHOOK_URL ?? null
   };
 }

@@ -73,6 +73,42 @@ describe("scrape service", () => {
     );
   });
 
+  it("notifies newly inserted housing posts when a notifier is configured", async () => {
+    const source = repositories.sources.create({
+      name: "청약홈",
+      url: "https://example.com/housing"
+    });
+    const scraper: HousingScraper = {
+      sourceId: source.id,
+      scrape: async () => [
+        {
+          title: "첫 번째 청약 공고",
+          url: "https://example.com/posts/1",
+          isNotice: true
+        }
+      ]
+    };
+    const notifiedPostIds: number[] = [];
+    const service = createScrapeService(repositories, {
+      notifier: {
+        notifyNewPosts: async (posts) => {
+          notifiedPostIds.push(...posts.map((post) => post.id));
+
+          return {
+            attemptedCount: posts.length,
+            sentCount: posts.length,
+            skippedCount: 0
+          };
+        }
+      }
+    });
+
+    const result = await service.runHousingScraper(scraper);
+
+    assert.equal(result.status, "success");
+    assert.deepEqual(notifiedPostIds, result.newPosts.map((post) => post.id));
+  });
+
   it("marks the scrape run as failed when the scraper throws", async () => {
     const source = repositories.sources.create({
       name: "청약홈",

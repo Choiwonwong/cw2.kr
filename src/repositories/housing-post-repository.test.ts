@@ -91,6 +91,22 @@ describe("housing post repository", () => {
     assert.equal(typeof submitted.updatedAt, "string");
   });
 
+  it("marks posts as notified", () => {
+    const sourceRepository = createScrapeSourceRepository(database);
+    const postRepository = createHousingPostRepository(database);
+    const source = sourceRepository.create({ name: "source", url: "https://example.com" });
+    const inserted = postRepository.insertIfNew({
+      sourceId: source.id,
+      title: "청약 공고",
+      url: "https://example.com/posts/1"
+    });
+
+    const notified = postRepository.markNotified(inserted.post.id);
+
+    assert.equal(typeof notified.notifiedAt, "string");
+    assert.equal(typeof notified.updatedAt, "string");
+  });
+
   it("finds recent housing posts newest first", () => {
     const sourceRepository = createScrapeSourceRepository(database);
     const postRepository = createHousingPostRepository(database);
