@@ -54,7 +54,7 @@ describe("housing post notifier", () => {
       skippedCount: 0
     });
     assert.equal(sentMessages.length, 1);
-    assert.equal(sentMessages[0]?.content, "새 청약/주거 공고가 발견됐습니다.");
+    assert.equal(sentMessages[0]?.content, "더포디엄830 신규 공지: 청약 공고");
     assert.equal(
       postRepository.findById(inserted.post.id)?.notifiedAt !== null,
       true

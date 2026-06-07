@@ -50,7 +50,7 @@ export function buildHousingPostMessage(post: HousingPost): NotificationMessage 
   }
 
   return {
-    content: "새 청약/주거 공고가 발견됐습니다.",
+    content: `더포디엄830 신규 공지: ${truncate(post.title, 180)}`,
     username: "cw2.kr housing alert",
     embeds: [
       {

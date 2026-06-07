@@ -58,6 +58,7 @@ describe("scrape service", () => {
     assert.equal(firstResult.foundCount, 2);
     assert.equal(firstResult.newCount, 2);
     assert.equal(firstResult.duplicateCount, 0);
+    assert.equal(firstResult.notificationErrorMessage, null);
 
     assert.equal(secondResult.status, "success");
     assert.equal(secondResult.foundCount, 2);
@@ -109,6 +110,79 @@ describe("scrape service", () => {
     assert.deepEqual(notifiedPostIds, result.newPosts.map((post) => post.id));
   });
 
+  it("retries existing unnotified housing posts without failing the scrape run", async () => {
+    const source = repositories.sources.create({
+      name: "청약홈",
+      url: "https://example.com/housing"
+    });
+    const unnotified = repositories.housingPosts.insertIfNew({
+      sourceId: source.id,
+      title: "이전 미알림 공고",
+      url: "https://example.com/posts/old"
+    });
+    const scraper: HousingScraper = {
+      sourceId: source.id,
+      scrape: async () => [
+        {
+          title: "새 공고",
+          url: "https://example.com/posts/new"
+        }
+      ]
+    };
+    const notifiedPostIds: number[] = [];
+    const service = createScrapeService(repositories, {
+      notifier: {
+        notifyNewPosts: async (posts) => {
+          notifiedPostIds.push(...posts.map((post) => post.id));
+
+          return {
+            attemptedCount: posts.length,
+            sentCount: posts.length,
+            skippedCount: 0
+          };
+        }
+      }
+    });
+
+    const result = await service.runHousingScraper(scraper);
+
+    assert.equal(result.status, "success");
+    assert.equal(result.notificationErrorMessage, null);
+    assert.deepEqual(notifiedPostIds, [
+      unnotified.post.id,
+      result.newPosts[0]?.id
+    ]);
+  });
+
+  it("keeps a scrape run successful when notification delivery fails", async () => {
+    const source = repositories.sources.create({
+      name: "청약홈",
+      url: "https://example.com/housing"
+    });
+    const scraper: HousingScraper = {
+      sourceId: source.id,
+      scrape: async () => [
+        {
+          title: "새 공고",
+          url: "https://example.com/posts/new"
+        }
+      ]
+    };
+    const service = createScrapeService(repositories, {
+      notifier: {
+        notifyNewPosts: async () => {
+          throw new Error("Discord failed");
+        }
+      }
+    });
+
+    const result = await service.runHousingScraper(scraper);
+
+    assert.equal(result.status, "success");
+    assert.equal(result.notificationErrorMessage, "Discord failed");
+    assert.equal(repositories.housingPosts.findUnnotified(10).length, 1);
+  });
+
   it("marks the scrape run as failed when the scraper throws", async () => {
     const source = repositories.sources.create({
       name: "청약홈",
@@ -129,6 +203,7 @@ describe("scrape service", () => {
     assert.equal(result.newCount, 0);
     assert.equal(result.duplicateCount, 0);
     assert.match(result.errorMessage ?? "", /Request failed/);
+    assert.equal(result.notificationErrorMessage, null);
 
     const runs = repositories.runs.findRecentBySource(source.id, 1);
     assert.equal(runs[0]?.status, "failed");

@@ -40,6 +40,7 @@ export type ScrapeServiceRunResult = {
   duplicateCount: number;
   newPosts: HousingPost[];
   errorMessage: string | null;
+  notificationErrorMessage: string | null;
 };
 
 export type ScrapeService = {
@@ -90,6 +91,7 @@ export function createScrapeService(
         const scrapedPosts = await scraper.scrape();
         const newPosts: HousingPost[] = [];
         let duplicateCount = 0;
+        let notificationErrorMessage: string | null = null;
 
         for (const scrapedPost of scrapedPosts) {
           const result = repositories.housingPosts.insertIfNew({
@@ -106,7 +108,13 @@ export function createScrapeService(
         }
 
         if (options.notifier) {
-          await options.notifier.notifyNewPosts(newPosts);
+          try {
+            const unnotifiedPosts = repositories.housingPosts.findUnnotified(50);
+
+            await options.notifier.notifyNewPosts(unnotifiedPosts);
+          } catch (error) {
+            notificationErrorMessage = errorToMessage(error);
+          }
         }
 
         const finishedRun = repositories.runs.markSuccess(run.id);
@@ -118,7 +126,8 @@ export function createScrapeService(
           newCount: newPosts.length,
           duplicateCount,
           newPosts,
-          errorMessage: null
+          errorMessage: null,
+          notificationErrorMessage
         };
       } catch (error) {
         const errorMessage = errorToMessage(error);
@@ -131,7 +140,8 @@ export function createScrapeService(
           newCount: 0,
           duplicateCount: 0,
           newPosts: [],
-          errorMessage
+          errorMessage,
+          notificationErrorMessage: null
         };
       }
     },

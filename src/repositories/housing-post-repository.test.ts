@@ -131,4 +131,32 @@ describe("housing post repository", () => {
     );
     assert.notEqual(first.post.id, second.post.id);
   });
+
+  it("finds unnotified housing posts oldest first", () => {
+    const sourceRepository = createScrapeSourceRepository(database);
+    const postRepository = createHousingPostRepository(database);
+    const source = sourceRepository.create({ name: "source", url: "https://example.com" });
+    const first = postRepository.insertIfNew({
+      sourceId: source.id,
+      title: "첫 번째",
+      url: "https://example.com/posts/1"
+    });
+    const second = postRepository.insertIfNew({
+      sourceId: source.id,
+      title: "두 번째",
+      url: "https://example.com/posts/2"
+    });
+    const third = postRepository.insertIfNew({
+      sourceId: source.id,
+      title: "세 번째",
+      url: "https://example.com/posts/3"
+    });
+
+    postRepository.markNotified(second.post.id);
+
+    assert.deepEqual(
+      postRepository.findUnnotified(10).map((post) => post.id),
+      [first.post.id, third.post.id]
+    );
+  });
 });

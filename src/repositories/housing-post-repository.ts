@@ -62,6 +62,7 @@ export type HousingPostRepository = {
   findById(id: number): HousingPost | null;
   findBySourceAndUrl(sourceId: number, url: string): HousingPost | null;
   findRecent(limit: number): HousingPost[];
+  findUnnotified(limit: number): HousingPost[];
   markChecked(id: number): HousingPost;
   markSubmitted(id: number): HousingPost;
   markNotified(id: number): HousingPost;
@@ -136,6 +137,14 @@ export function createHousingPostRepository(
     LIMIT ?
   `);
 
+  const findUnnotifiedStatement = database.prepare<number, HousingPostRow>(`
+    SELECT *
+    FROM scraped_housing_posts
+    WHERE notified_at IS NULL
+    ORDER BY id ASC
+    LIMIT ?
+  `);
+
   const markCheckedStatement = database.prepare(`
     UPDATE scraped_housing_posts
     SET is_checked = 1, updated_at = CURRENT_TIMESTAMP
@@ -205,6 +214,10 @@ export function createHousingPostRepository(
 
     findRecent(limit) {
       return findRecentStatement.all(limit).map(toHousingPost);
+    },
+
+    findUnnotified(limit) {
+      return findUnnotifiedStatement.all(limit).map(toHousingPost);
     },
 
     markChecked(id) {
