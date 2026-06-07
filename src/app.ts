@@ -22,6 +22,10 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     logger: true
   });
 
+  app.get("/favicon.ico", async (_request, reply) => {
+    return reply.code(204).send();
+  });
+
   await registerHealthRoute(app, config);
   await registerDashboardRoutes(app, repositories);
 

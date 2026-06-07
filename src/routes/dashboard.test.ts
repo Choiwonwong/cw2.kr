@@ -40,6 +40,15 @@ afterEach(async () => {
 });
 
 describe("dashboard routes", () => {
+  it("serves a no-content favicon response for browser chrome", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/favicon.ico"
+    });
+
+    assert.equal(response.statusCode, 204);
+  });
+
   it("renders the overview dashboard", async () => {
     const source = repositories.sources.create({
       name: "더포디엄830 공지사항",
