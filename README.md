@@ -74,6 +74,14 @@ npm install
 npm run dev
 ```
 
+Open the internal housing dashboard:
+
+```text
+http://127.0.0.1:3000/
+http://127.0.0.1:3000/housing-posts
+http://127.0.0.1:3000/runs
+```
+
 Send a standalone Discord alert to verify webhook configuration:
 
 ```bash

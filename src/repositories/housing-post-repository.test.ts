@@ -233,4 +233,32 @@ describe("housing post repository", () => {
       [first.post.id, third.post.id]
     );
   });
+
+  it("finds unchecked housing posts newest first", () => {
+    const sourceRepository = createScrapeSourceRepository(database);
+    const postRepository = createHousingPostRepository(database);
+    const source = sourceRepository.create({ name: "source", url: "https://example.com" });
+    const first = postRepository.insertIfNew({
+      sourceId: source.id,
+      title: "첫 번째",
+      url: "https://example.com/posts/1"
+    });
+    const second = postRepository.insertIfNew({
+      sourceId: source.id,
+      title: "두 번째",
+      url: "https://example.com/posts/2"
+    });
+    const third = postRepository.insertIfNew({
+      sourceId: source.id,
+      title: "세 번째",
+      url: "https://example.com/posts/3"
+    });
+
+    postRepository.markChecked(second.post.id);
+
+    assert.deepEqual(
+      postRepository.findUnchecked(10).map((post) => post.id),
+      [third.post.id, first.post.id]
+    );
+  });
 });

@@ -74,4 +74,28 @@ describe("scrape run repository", () => {
     );
     assert.notEqual(first.id, second.id);
   });
+
+  it("finds recent runs across all sources", () => {
+    const sourceRepository = createScrapeSourceRepository(database);
+    const runRepository = createScrapeRunRepository(database);
+    const firstSource = sourceRepository.create({
+      name: "source-1",
+      url: "https://example.com/1"
+    });
+    const secondSource = sourceRepository.create({
+      name: "source-2",
+      url: "https://example.com/2"
+    });
+
+    const first = runRepository.create(firstSource.id);
+    const second = runRepository.create(secondSource.id);
+
+    runRepository.markSuccess(first.id);
+    runRepository.markFailed(second.id, "failed");
+
+    assert.deepEqual(
+      runRepository.findRecent(2).map((run) => run.id),
+      [second.id, first.id]
+    );
+  });
 });

@@ -27,6 +27,7 @@ export type ScrapeRunRepository = {
   markSuccess(id: number): ScrapeRun;
   markFailed(id: number, errorMessage: string): ScrapeRun;
   findById(id: number): ScrapeRun | null;
+  findRecent(limit: number): ScrapeRun[];
   findRecentBySource(sourceId: number, limit: number): ScrapeRun[];
 };
 
@@ -76,6 +77,13 @@ export function createScrapeRunRepository(
     LIMIT ?
   `);
 
+  const findRecentStatement = database.prepare<number, ScrapeRunRow>(`
+    SELECT id, source_id, status, error_message, started_at, finished_at, created_at
+    FROM scrape_runs
+    ORDER BY id DESC
+    LIMIT ?
+  `);
+
   function requireRun(id: number): ScrapeRun {
     const run = findByIdStatement.get(id);
 
@@ -109,6 +117,10 @@ export function createScrapeRunRepository(
       const row = findByIdStatement.get(id);
 
       return row ? toScrapeRun(row) : null;
+    },
+
+    findRecent(limit) {
+      return findRecentStatement.all(limit).map(toScrapeRun);
     },
 
     findRecentBySource(sourceId, limit) {

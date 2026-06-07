@@ -1,15 +1,35 @@
 import Fastify, { type FastifyInstance } from "fastify";
 
 import { loadConfig } from "./config.js";
+import type { AppConfig } from "./config.js";
+import {
+  openAppRepositories,
+  type AppRepositories
+} from "./repositories/app-repositories.js";
+import { registerDashboardRoutes } from "./routes/dashboard.js";
 import { registerHealthRoute } from "./routes/health.js";
 
-export async function buildApp(): Promise<FastifyInstance> {
-  const config = loadConfig();
+export type BuildAppOptions = {
+  config?: AppConfig;
+  repositories?: AppRepositories;
+};
+
+export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
+  const config = options.config ?? loadConfig();
+  const repositories = options.repositories ?? openAppRepositories(config);
+  const shouldCloseDatabase = options.repositories === undefined;
   const app = Fastify({
     logger: true
   });
 
   await registerHealthRoute(app, config);
+  await registerDashboardRoutes(app, repositories);
+
+  if (shouldCloseDatabase) {
+    app.addHook("onClose", async () => {
+      repositories.database.close();
+    });
+  }
 
   return app;
 }
