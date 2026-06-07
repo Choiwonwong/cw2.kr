@@ -189,7 +189,6 @@ function layout(title: string, body: string): string {
 <body>
   <header>
     <h1>cw2.kr Housing Dashboard</h1>
-    <p>여러 주거 공고 source의 스크래핑 결과, 확인, 신청 상태를 보는 내부 대시보드</p>
     <nav>
       <a href="/">Overview</a>
       <a href="/housing-posts">Housing posts</a>
@@ -397,7 +396,6 @@ export async function registerDashboardRoutes(
         "Housing posts",
         `<section class="card">
           <h2>Housing posts</h2>
-          <p class="muted">모든 source에서 수집된 최근 50개 공고입니다. 확인/신청 상태는 이 페이지에서만 관리하고, 실제 신청은 외부에서 진행합니다.</p>
           <div class="table-scroll">
             <table><thead><tr><th>Source</th><th>Title</th><th>Posted</th><th>Notify</th><th>Checked</th><th>Submitted</th><th>Actions</th></tr></thead><tbody>${renderPostRows(posts, sourcesById)}</tbody></table>
           </div>
