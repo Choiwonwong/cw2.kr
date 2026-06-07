@@ -20,7 +20,7 @@ type DashboardQuery = {
   status?: string;
 };
 
-type NavKey = "overview" | "posts" | "runs" | "sources" | "health";
+type NavKey = "overview" | "posts" | "runs" | "sources";
 
 const statusLabels: Record<SourceHealth, string> = {
   unknown: "이력 없음",
@@ -202,8 +202,7 @@ function layout(active: NavKey, title: string, body: string, footerMeta = ""): s
     ["overview", "/", "Overview", "⌂"],
     ["posts", "/housing-posts", "Housing Posts", "▤"],
     ["runs", "/runs", "Scrape Runs", "▷"],
-    ["sources", "/sources", "Sources", "◉"],
-    ["health", "/health", "Health", "◌"]
+    ["sources", "/sources", "Sources", "◉"]
   ] as const;
 
   return `<!doctype html>
