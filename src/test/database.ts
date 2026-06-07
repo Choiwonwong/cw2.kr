@@ -1,12 +1,10 @@
-import { readFileSync } from "node:fs";
-
 import { openDatabase, type DatabaseConnection } from "../db/connection.js";
+import { initializeDatabaseSchema } from "../db/schema.js";
 
 export function createTestDatabase(): DatabaseConnection {
   const database = openDatabase(":memory:");
-  const schema = readFileSync("src/db/schema.sql", "utf8");
 
-  database.exec(schema);
+  initializeDatabaseSchema(database);
 
   return database;
 }
