@@ -54,6 +54,7 @@ export type InsertHousingPostInput = {
 
 export type InsertHousingPostResult = {
   inserted: boolean;
+  updated: boolean;
   post: HousingPost;
 };
 
@@ -118,6 +119,20 @@ export function createHousingPostRepository(
     )
   `);
 
+  const updateScrapedPostStatement = database.prepare(`
+    UPDATE scraped_housing_posts
+    SET
+      source_seq = @sourceSeq,
+      external_id = @externalId,
+      title = @title,
+      description = @description,
+      is_notice = @isNotice,
+      posted_at = @postedAt,
+      attachments_json = @attachmentsJson,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = @id
+  `);
+
   const findByIdStatement = database.prepare<number, HousingPostRow>(`
     SELECT *
     FROM scraped_housing_posts
@@ -173,6 +188,21 @@ export function createHousingPostRepository(
     return toHousingPost(post);
   }
 
+  function hasScrapedContentChanged(
+    post: HousingPost,
+    input: InsertHousingPostInput
+  ): boolean {
+    return (
+      post.sourceSeq !== (input.sourceSeq ?? null) ||
+      post.externalId !== (input.externalId ?? null) ||
+      post.title !== input.title ||
+      post.description !== (input.description ?? null) ||
+      post.isNotice !== (input.isNotice ?? false) ||
+      post.postedAt !== (input.postedAt ?? null) ||
+      post.attachmentsJson !== (input.attachmentsJson ?? null)
+    );
+  }
+
   return {
     insertIfNew(input) {
       const result = insertPost.run({
@@ -188,14 +218,32 @@ export function createHousingPostRepository(
         attachmentsJson: input.attachmentsJson ?? null
       });
 
-      const post = this.findBySourceAndUrl(input.sourceId, input.url);
+      let post = this.findBySourceAndUrl(input.sourceId, input.url);
 
       if (!post) {
         throw new Error("Failed to read inserted housing post");
       }
 
+      let updated = false;
+
+      if (result.changes === 0 && hasScrapedContentChanged(post, input)) {
+        updateScrapedPostStatement.run({
+          id: post.id,
+          sourceSeq: input.sourceSeq ?? null,
+          externalId: input.externalId ?? null,
+          title: input.title,
+          description: input.description ?? null,
+          isNotice: booleanToSqlite(input.isNotice ?? false),
+          postedAt: input.postedAt ?? null,
+          attachmentsJson: input.attachmentsJson ?? null
+        });
+        post = requirePost(post.id);
+        updated = true;
+      }
+
       return {
         inserted: result.changes === 1,
+        updated,
         post
       };
     },

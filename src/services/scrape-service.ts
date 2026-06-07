@@ -38,6 +38,7 @@ export type ScrapeServiceRunResult = {
   foundCount: number;
   newCount: number;
   duplicateCount: number;
+  updatedCount: number;
   newPosts: HousingPost[];
   errorMessage: string | null;
   notificationErrorMessage: string | null;
@@ -91,6 +92,7 @@ export function createScrapeService(
         const scrapedPosts = await scraper.scrape();
         const newPosts: HousingPost[] = [];
         let duplicateCount = 0;
+        let updatedCount = 0;
         let notificationErrorMessage: string | null = null;
 
         for (const scrapedPost of scrapedPosts) {
@@ -102,6 +104,8 @@ export function createScrapeService(
 
           if (result.inserted) {
             newPosts.push(result.post);
+          } else if (result.updated) {
+            updatedCount += 1;
           } else {
             duplicateCount += 1;
           }
@@ -125,6 +129,7 @@ export function createScrapeService(
           foundCount: scrapedPosts.length,
           newCount: newPosts.length,
           duplicateCount,
+          updatedCount,
           newPosts,
           errorMessage: null,
           notificationErrorMessage
@@ -139,6 +144,7 @@ export function createScrapeService(
           foundCount: 0,
           newCount: 0,
           duplicateCount: 0,
+          updatedCount: 0,
           newPosts: [],
           errorMessage,
           notificationErrorMessage: null

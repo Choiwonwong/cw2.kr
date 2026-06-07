@@ -39,6 +39,7 @@ describe("housing post repository", () => {
     });
 
     assert.equal(result.inserted, true);
+    assert.equal(result.updated, false);
     assert.equal(result.post.id, 1);
     assert.equal(result.post.sourceId, source.id);
     assert.equal(result.post.firstSeenRunId, run.id);
@@ -48,7 +49,7 @@ describe("housing post repository", () => {
     assert.equal(result.post.notifiedAt, null);
   });
 
-  it("does not insert duplicates for the same source and URL", () => {
+  it("does not update unchanged duplicates for the same source and URL", () => {
     const sourceRepository = createScrapeSourceRepository(database);
     const postRepository = createHousingPostRepository(database);
     const source = sourceRepository.create({ name: "source", url: "https://example.com" });
@@ -61,14 +62,60 @@ describe("housing post repository", () => {
 
     const second = postRepository.insertIfNew({
       sourceId: source.id,
-      title: "변경된 제목",
+      title: "원본 제목",
       url: "https://example.com/posts/1"
     });
 
     assert.equal(first.inserted, true);
+    assert.equal(first.updated, false);
     assert.equal(second.inserted, false);
+    assert.equal(second.updated, false);
     assert.equal(second.post.id, first.post.id);
     assert.equal(second.post.title, "원본 제목");
+  });
+
+  it("updates scraped content when a duplicate URL changes", () => {
+    const sourceRepository = createScrapeSourceRepository(database);
+    const postRepository = createHousingPostRepository(database);
+    const source = sourceRepository.create({ name: "source", url: "https://example.com" });
+
+    const first = postRepository.insertIfNew({
+      sourceId: source.id,
+      sourceSeq: 1,
+      externalId: "post-1",
+      title: "원본 제목",
+      description: "원본 내용",
+      url: "https://example.com/posts/1",
+      isNotice: false,
+      postedAt: "2026-05-13T00:00:00Z",
+      attachmentsJson: null
+    });
+
+    const second = postRepository.insertIfNew({
+      sourceId: source.id,
+      sourceSeq: 2,
+      externalId: "post-1",
+      title: "변경된 제목",
+      description: "변경된 내용",
+      url: "https://example.com/posts/1",
+      isNotice: true,
+      postedAt: "2026-05-14T00:00:00Z",
+      attachmentsJson: JSON.stringify([
+        { name: "updated.pdf", url: "https://example.com/updated.pdf" }
+      ])
+    });
+
+    assert.equal(first.inserted, true);
+    assert.equal(second.inserted, false);
+    assert.equal(second.updated, true);
+    assert.equal(second.post.id, first.post.id);
+    assert.equal(second.post.firstSeenRunId, first.post.firstSeenRunId);
+    assert.equal(second.post.sourceSeq, 2);
+    assert.equal(second.post.title, "변경된 제목");
+    assert.equal(second.post.description, "변경된 내용");
+    assert.equal(second.post.isNotice, true);
+    assert.equal(second.post.postedAt, "2026-05-14T00:00:00Z");
+    assert.equal(typeof second.post.updatedAt, "string");
   });
 
   it("marks posts as checked and submitted", () => {

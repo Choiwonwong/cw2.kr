@@ -57,12 +57,14 @@ describe("scrape service", () => {
     assert.equal(firstResult.status, "success");
     assert.equal(firstResult.foundCount, 2);
     assert.equal(firstResult.newCount, 2);
+    assert.equal(firstResult.updatedCount, 0);
     assert.equal(firstResult.duplicateCount, 0);
     assert.equal(firstResult.notificationErrorMessage, null);
 
     assert.equal(secondResult.status, "success");
     assert.equal(secondResult.foundCount, 2);
     assert.equal(secondResult.newCount, 0);
+    assert.equal(secondResult.updatedCount, 0);
     assert.equal(secondResult.duplicateCount, 2);
 
     assert.equal(repositories.housingPosts.findRecent(10).length, 2);
@@ -71,6 +73,46 @@ describe("scrape service", () => {
     assert.deepEqual(
       runs.map((run) => run.status),
       ["success", "success"]
+    );
+  });
+
+  it("updates changed duplicate housing posts and reports them separately", async () => {
+    const source = repositories.sources.create({
+      name: "청약홈",
+      url: "https://example.com/housing"
+    });
+    let title = "원본 공고";
+    const scraper: HousingScraper = {
+      sourceId: source.id,
+      scrape: async () => [
+        {
+          sourceSeq: 1,
+          externalId: "post-1",
+          title,
+          description: "본문",
+          url: "https://example.com/posts/1",
+          postedAt: "2026-05-13T00:00:00Z"
+        }
+      ]
+    };
+    const service = createScrapeService(repositories);
+
+    const firstResult = await service.runHousingScraper(scraper);
+    title = "수정된 공고";
+    const secondResult = await service.runHousingScraper(scraper);
+
+    assert.equal(firstResult.newCount, 1);
+    assert.equal(firstResult.updatedCount, 0);
+    assert.equal(firstResult.duplicateCount, 0);
+    assert.equal(secondResult.newCount, 0);
+    assert.equal(secondResult.updatedCount, 1);
+    assert.equal(secondResult.duplicateCount, 0);
+    assert.equal(
+      repositories.housingPosts.findBySourceAndUrl(
+        source.id,
+        "https://example.com/posts/1"
+      )?.title,
+      "수정된 공고"
     );
   });
 
@@ -201,6 +243,7 @@ describe("scrape service", () => {
     assert.equal(result.status, "failed");
     assert.equal(result.foundCount, 0);
     assert.equal(result.newCount, 0);
+    assert.equal(result.updatedCount, 0);
     assert.equal(result.duplicateCount, 0);
     assert.match(result.errorMessage ?? "", /Request failed/);
     assert.equal(result.notificationErrorMessage, null);

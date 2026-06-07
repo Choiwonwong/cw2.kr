@@ -41,6 +41,7 @@ try {
         `status=${result.status}`,
         `found=${result.foundCount}`,
         `new=${result.newCount}`,
+        `updated=${result.updatedCount}`,
         `duplicates=${result.duplicateCount}`,
         result.errorMessage ? `error="${result.errorMessage}"` : null,
         result.notificationErrorMessage
