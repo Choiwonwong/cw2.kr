@@ -35,7 +35,7 @@ describe("the podium 830 scraper", () => {
     ]);
   });
 
-  it("fetches the first notice page through the public API", async () => {
+  it("fetches pinned and regular notice pages through the public API", async () => {
     const calls: Array<{
       input: string | URL;
       init?: RequestInit;
@@ -44,17 +44,27 @@ describe("the podium 830 scraper", () => {
       fetchImplementation: async (input, init) => {
         calls.push({ input, init });
 
+        const url = input.toString();
+
         return {
           ok: true,
           status: 200,
           statusText: "OK",
           json: async () => ({
             notifications: [
-              {
-                _id: "notice-1",
-                subject: "첫 번째 공고",
-                createdAt: "2026-05-19T00:00:00.000Z"
-              }
+              url.includes("isNotice=true")
+                ? {
+                    _id: "pinned-1",
+                    subject: "고정 공지",
+                    createdAt: "2026-05-20T00:00:00.000Z",
+                    isNotice: true
+                  }
+                : {
+                    _id: "notice-1",
+                    subject: "첫 번째 공고",
+                    createdAt: "2026-05-19T00:00:00.000Z",
+                    isNotice: false
+                  }
             ]
           })
         };
@@ -63,17 +73,22 @@ describe("the podium 830 scraper", () => {
 
     const posts = await scraper.scrape();
 
-    assert.equal(calls.length, 1);
-    assert.equal(
-      calls[0]?.input.toString(),
-      "https://thepodium830.com/api/v1/center/notifications?isNotice=false&searchKey=all&searchValue="
-    );
+    assert.equal(calls.length, 2);
+    assert.equal(calls[0]?.input.toString().includes("isNotice=true"), true);
+    assert.equal(calls[1]?.input.toString().includes("isNotice=false"), true);
     assert.deepEqual(calls[0]?.init?.headers, {
       skip: "0",
       limit: "10"
     });
-    assert.equal(posts.length, 1);
-    assert.equal(posts[0]?.externalId, "notice-1");
+    assert.deepEqual(calls[1]?.init?.headers, {
+      skip: "0",
+      limit: "10"
+    });
+    assert.equal(posts.length, 2);
+    assert.equal(posts[0]?.externalId, "pinned-1");
+    assert.equal(posts[0]?.isNotice, true);
+    assert.equal(posts[1]?.externalId, "notice-1");
+    assert.equal(posts[1]?.isNotice, false);
   });
 
   it("throws when the public API fails", async () => {

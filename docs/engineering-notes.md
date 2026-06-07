@@ -96,6 +96,11 @@ npm run scrape
 scraper implementations, stores new posts through `ScrapeService`, and sends
 Discord alerts when `DISCORD_WEBHOOK_URL` is present.
 
+The Podium 830 notice scraper collects both pinned notices (`isNotice=true`) and
+regular notices (`isNotice=false`). Pinned/display ordering is treated as
+presentation metadata; duplicate identity and content updates should rely on the
+post URL and persisted scrape content rather than page position alone.
+
 ## Test Placement
 
 Unit and small integration-style tests may live next to the implementation file:

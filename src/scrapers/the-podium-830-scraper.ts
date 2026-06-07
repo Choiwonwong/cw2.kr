@@ -4,8 +4,8 @@ export const THE_PODIUM_830_NOTICE_SOURCE_URL =
   "https://thepodium830.com/center/notice?isNotice=false&searchKey=all&searchValue&page=1";
 
 const THE_PODIUM_830_ORIGIN = "https://thepodium830.com";
-const THE_PODIUM_830_NOTICE_API_URL =
-  "https://thepodium830.com/api/v1/center/notifications?isNotice=false&searchKey=all&searchValue=";
+const THE_PODIUM_830_NOTICE_API_BASE_URL =
+  "https://thepodium830.com/api/v1/center/notifications?searchKey=all&searchValue=";
 
 type FetchLike = (
   input: string | URL,
@@ -49,6 +49,14 @@ function toAbsoluteUrl(value: string): string {
   return new URL(value, THE_PODIUM_830_ORIGIN).toString();
 }
 
+function buildNoticeApiUrl(isNotice: boolean): string {
+  const url = new URL(THE_PODIUM_830_NOTICE_API_BASE_URL);
+
+  url.searchParams.set("isNotice", String(isNotice));
+
+  return url.toString();
+}
+
 export function mapThePodium830Notification(
   notification: ThePodium830Notification,
   index: number
@@ -76,24 +84,35 @@ export function createThePodium830Scraper({
   fetchImplementation = fetch,
   limit = 10
 }: ThePodium830ScraperOptions = {}) {
+  async function fetchNotifications(
+    isNotice: boolean
+  ): Promise<ThePodium830Notification[]> {
+    const response = await fetchImplementation(buildNoticeApiUrl(isNotice), {
+      headers: {
+        skip: "0",
+        limit: String(limit)
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `The Podium 830 notice API failed: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const payload = (await response.json()) as ThePodium830NotificationsResponse;
+
+    return payload.notifications ?? [];
+  }
+
   return {
     async scrape(): Promise<ScrapedHousingPost[]> {
-      const response = await fetchImplementation(THE_PODIUM_830_NOTICE_API_URL, {
-        headers: {
-          skip: "0",
-          limit: String(limit)
-        }
-      });
+      const notifications = [
+        ...(await fetchNotifications(true)),
+        ...(await fetchNotifications(false))
+      ];
 
-      if (!response.ok) {
-        throw new Error(
-          `The Podium 830 notice API failed: ${response.status} ${response.statusText}`
-        );
-      }
-
-      const payload = (await response.json()) as ThePodium830NotificationsResponse;
-
-      return (payload.notifications ?? []).map(mapThePodium830Notification);
+      return notifications.map(mapThePodium830Notification);
     }
   };
 }

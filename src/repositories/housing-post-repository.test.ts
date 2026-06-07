@@ -74,6 +74,33 @@ describe("housing post repository", () => {
     assert.equal(second.post.title, "원본 제목");
   });
 
+  it("ignores source sequence changes when duplicate content is unchanged", () => {
+    const sourceRepository = createScrapeSourceRepository(database);
+    const postRepository = createHousingPostRepository(database);
+    const source = sourceRepository.create({ name: "source", url: "https://example.com" });
+
+    const first = postRepository.insertIfNew({
+      sourceId: source.id,
+      sourceSeq: 1,
+      externalId: "post-1",
+      title: "원본 제목",
+      url: "https://example.com/posts/1"
+    });
+
+    const second = postRepository.insertIfNew({
+      sourceId: source.id,
+      sourceSeq: 2,
+      externalId: "post-1",
+      title: "원본 제목",
+      url: "https://example.com/posts/1"
+    });
+
+    assert.equal(first.inserted, true);
+    assert.equal(second.inserted, false);
+    assert.equal(second.updated, false);
+    assert.equal(second.post.sourceSeq, 1);
+  });
+
   it("updates scraped content when a duplicate URL changes", () => {
     const sourceRepository = createScrapeSourceRepository(database);
     const postRepository = createHousingPostRepository(database);
@@ -110,7 +137,7 @@ describe("housing post repository", () => {
     assert.equal(second.updated, true);
     assert.equal(second.post.id, first.post.id);
     assert.equal(second.post.firstSeenRunId, first.post.firstSeenRunId);
-    assert.equal(second.post.sourceSeq, 2);
+    assert.equal(second.post.sourceSeq, first.post.sourceSeq);
     assert.equal(second.post.title, "변경된 제목");
     assert.equal(second.post.description, "변경된 내용");
     assert.equal(second.post.isNotice, true);

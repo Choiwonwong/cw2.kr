@@ -122,7 +122,6 @@ export function createHousingPostRepository(
   const updateScrapedPostStatement = database.prepare(`
     UPDATE scraped_housing_posts
     SET
-      source_seq = @sourceSeq,
       external_id = @externalId,
       title = @title,
       description = @description,
@@ -193,7 +192,6 @@ export function createHousingPostRepository(
     input: InsertHousingPostInput
   ): boolean {
     return (
-      post.sourceSeq !== (input.sourceSeq ?? null) ||
       post.externalId !== (input.externalId ?? null) ||
       post.title !== input.title ||
       post.description !== (input.description ?? null) ||
@@ -229,7 +227,6 @@ export function createHousingPostRepository(
       if (result.changes === 0 && hasScrapedContentChanged(post, input)) {
         updateScrapedPostStatement.run({
           id: post.id,
-          sourceSeq: input.sourceSeq ?? null,
           externalId: input.externalId ?? null,
           title: input.title,
           description: input.description ?? null,
