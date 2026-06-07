@@ -53,4 +53,15 @@ describe("scrape source repository", () => {
       [enabled.id]
     );
   });
+
+  it("finds a source by URL", () => {
+    const repository = createScrapeSourceRepository(database);
+    const source = repository.create({
+      name: "더포디엄830",
+      url: "https://thepodium830.com/center/notice?isNotice=false&searchKey=all&searchValue&page=1"
+    });
+
+    assert.equal(repository.findByUrl(source.url)?.id, source.id);
+    assert.equal(repository.findByUrl("https://example.com/missing"), null);
+  });
 });

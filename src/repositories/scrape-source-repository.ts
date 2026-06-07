@@ -29,6 +29,7 @@ export type ScrapeSourceRepository = {
   create(input: CreateScrapeSourceInput): ScrapeSource;
   findEnabled(): ScrapeSource[];
   findById(id: number): ScrapeSource | null;
+  findByUrl(url: string): ScrapeSource | null;
 };
 
 function toScrapeSource(row: ScrapeSourceRow): ScrapeSource {
@@ -63,6 +64,12 @@ export function createScrapeSourceRepository(
     ORDER BY id ASC
   `);
 
+  const findByUrlStatement = database.prepare<string, ScrapeSourceRow>(`
+    SELECT id, name, url, enabled, created_at, updated_at
+    FROM scrape_sources
+    WHERE url = ?
+  `);
+
   return {
     create(input) {
       const result = insertSource.run({
@@ -86,6 +93,12 @@ export function createScrapeSourceRepository(
 
     findById(id) {
       const row = findByIdStatement.get(id);
+
+      return row ? toScrapeSource(row) : null;
+    },
+
+    findByUrl(url) {
+      const row = findByUrlStatement.get(url);
 
       return row ? toScrapeSource(row) : null;
     }

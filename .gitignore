@@ -24,6 +24,7 @@ coverage/
 # Runtime data
 /data/
 data/
+.omx/
 *.db
 *.db-*
 *.sqlite

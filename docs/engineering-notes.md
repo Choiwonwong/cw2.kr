@@ -80,6 +80,22 @@ Services depend on the generic notification adapter shape instead of `fetch`
 directly. Tests can pass an in-memory adapter that records messages, while
 runtime scripts can use the real Discord webhook adapter.
 
+## Headless Scraper Operations
+
+v1 source management is CLI-first rather than web-UI-first.
+
+Current commands:
+
+```bash
+npm run sources:seed:thepodium
+npm run sources:list
+npm run scrape
+```
+
+`npm run scrape` reads enabled sources from SQLite, maps supported sources to
+scraper implementations, stores new posts through `ScrapeService`, and sends
+Discord alerts when `DISCORD_WEBHOOK_URL` is present.
+
 ## Test Placement
 
 Unit and small integration-style tests may live next to the implementation file:

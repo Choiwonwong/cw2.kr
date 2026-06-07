@@ -80,6 +80,20 @@ Send a standalone Discord alert to verify webhook configuration:
 DISCORD_WEBHOOK_URL=... npm run alert:test
 ```
 
+Seed and run the first headless scraper:
+
+```bash
+npm run sources:seed:thepodium
+npm run sources:list
+DISCORD_WEBHOOK_URL=... npm run scrape
+```
+
+Example twice-daily cron entry:
+
+```cron
+0 9,21 * * * cd /path/to/cw2.kr && DATABASE_PATH=./data/cw2.db DISCORD_WEBHOOK_URL=... npm run scrape
+```
+
 ## Environment Variables
 
 Create `.env` from `.env.example` when the application scaffold is ready.

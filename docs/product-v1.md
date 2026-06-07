@@ -47,6 +47,26 @@ Recommended initial execution path:
 npm run scrape
 ```
 
+The first v1 scraper targets the first page of The Podium 830 notices:
+
+```text
+https://thepodium830.com/center/notice?isNotice=false&searchKey=all&searchValue&page=1
+```
+
+Source management is headless in v1:
+
+```bash
+npm run sources:seed:thepodium
+npm run sources:list
+```
+
+Run it twice daily with an external scheduler such as cron or systemd timer.
+For cron, one simple option is:
+
+```cron
+0 9,21 * * * cd /path/to/cw2.kr && DATABASE_PATH=./data/cw2.db DISCORD_WEBHOOK_URL=... npm run scrape
+```
+
 Scheduled execution should initially be handled outside the database schema, such as with EC2 cron, systemd timer, or container-level scheduling.
 
 ### Dashboard

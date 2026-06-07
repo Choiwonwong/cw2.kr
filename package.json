@@ -10,6 +10,9 @@
     "start": "node dist/server.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:init": "tsx src/db/init-db.ts",
+    "sources:seed:thepodium": "tsx src/cli/seed-the-podium-source.ts",
+    "sources:list": "tsx src/cli/list-sources.ts",
+    "scrape": "tsx src/cli/run-scrape.ts",
     "alert:test": "tsx src/scripts/send-discord-test-alert.ts",
     "test": "node --import tsx --test \"src/**/*.test.ts\""
   },
