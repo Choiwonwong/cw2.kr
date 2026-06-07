@@ -109,6 +109,29 @@ describe("dashboard routes", () => {
     assert.match(response.body, /비활성/);
   });
 
+  it("renders multiple sources on the sources page", async () => {
+    repositories.sources.create({
+      name: "더포디엄830 공지사항",
+      url: "https://example.com/the-podium"
+    });
+    repositories.sources.create({
+      name: "테스트 청년주택 공고",
+      url: "https://example.com/test-housing",
+      enabled: false
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/sources"
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.match(response.body, /Scrape sources/);
+    assert.match(response.body, /더포디엄830 공지사항/);
+    assert.match(response.body, /테스트 청년주택 공고/);
+    assert.match(response.body, /비활성/);
+  });
+
   it("renders housing posts and marks checked/submitted through form endpoints", async () => {
     const source = repositories.sources.create({
       name: "source",
@@ -219,5 +242,30 @@ describe("dashboard routes", () => {
     assert.equal(response.statusCode, 200);
     assert.match(response.body, /Network timeout/);
     assert.doesNotMatch(response.body, new RegExp(`#${success.id}</td>`));
+  });
+
+  it("filters scrape runs by source", async () => {
+    const sourceA = repositories.sources.create({
+      name: "source A",
+      url: "https://example.com/source-a"
+    });
+    const sourceB = repositories.sources.create({
+      name: "source B",
+      url: "https://example.com/source-b"
+    });
+    const runA = repositories.runs.create(sourceA.id);
+    const runB = repositories.runs.create(sourceB.id);
+
+    repositories.runs.markSuccess(runA.id, { foundCount: 3 });
+    repositories.runs.markFailed(runB.id, "source B failed");
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/runs?source=${sourceA.id}`
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.match(response.body, /source A/);
+    assert.doesNotMatch(response.body, /source B failed/);
   });
 });
