@@ -68,11 +68,11 @@ describe("dashboard routes", () => {
 
     assert.equal(response.statusCode, 200);
     assert.match(response.headers["content-type"] ?? "", /text\/html/);
-    assert.match(response.body, /cw2\.kr Housing Dashboard/);
+    assert.match(response.body, /Housing Ops/);
     assert.match(response.body, /더포디엄830 공지사항/);
     assert.match(response.body, /신규 공고/);
     assert.match(response.body, /정상/);
-    assert.match(response.body, /Scrape sources/);
+    assert.match(response.body, /소스 상태/);
     assert.match(response.body, /발견/);
     assert.match(response.body, /업데이트/);
     assert.match(response.body, /13/);
@@ -119,7 +119,7 @@ describe("dashboard routes", () => {
     assert.equal(page.statusCode, 200);
     assert.match(page.body, /확인할 공고/);
     assert.match(page.body, /mark-checked/);
-    assert.match(page.body, /mark-submitted/);
+    assert.doesNotMatch(page.body, /mark-submitted/);
 
     const checked = await app.inject({
       method: "POST",
@@ -139,6 +139,38 @@ describe("dashboard routes", () => {
     assert.equal(repositories.housingPosts.findById(inserted.post.id)?.isSubmitted, true);
   });
 
+  it("filters housing posts by source, text, and workflow state", async () => {
+    const sourceA = repositories.sources.create({
+      name: "source A",
+      url: "https://example.com/source-a"
+    });
+    const sourceB = repositories.sources.create({
+      name: "source B",
+      url: "https://example.com/source-b"
+    });
+
+    repositories.housingPosts.insertIfNew({
+      sourceId: sourceA.id,
+      title: "서울 청년안심주택 공고",
+      url: "https://example.com/posts/seoul"
+    });
+    const checked = repositories.housingPosts.insertIfNew({
+      sourceId: sourceB.id,
+      title: "부산 공고",
+      url: "https://example.com/posts/busan"
+    });
+    repositories.housingPosts.markChecked(checked.post.id);
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/housing-posts?source=${sourceA.id}&q=서울&checked=unchecked`
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.match(response.body, /서울 청년안심주택 공고/);
+    assert.doesNotMatch(response.body, /부산 공고/);
+  });
+
   it("renders recent scrape runs", async () => {
     const source = repositories.sources.create({
       name: "source",
@@ -155,7 +187,28 @@ describe("dashboard routes", () => {
 
     assert.equal(response.statusCode, 200);
     assert.match(response.body, /Scrape runs/);
-    assert.match(response.body, /failed/);
+    assert.match(response.body, /실패/);
     assert.match(response.body, /Network timeout/);
+  });
+
+  it("filters scrape runs by status", async () => {
+    const source = repositories.sources.create({
+      name: "source",
+      url: "https://example.com/source"
+    });
+    const success = repositories.runs.create(source.id);
+    const failure = repositories.runs.create(source.id);
+
+    repositories.runs.markSuccess(success.id);
+    repositories.runs.markFailed(failure.id, "Network timeout");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/runs?status=failed"
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.match(response.body, /Network timeout/);
+    assert.doesNotMatch(response.body, new RegExp(`#${success.id}</td>`));
   });
 });
