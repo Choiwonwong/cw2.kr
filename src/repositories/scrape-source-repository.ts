@@ -27,6 +27,7 @@ export type CreateScrapeSourceInput = {
 
 export type ScrapeSourceRepository = {
   create(input: CreateScrapeSourceInput): ScrapeSource;
+  findAll(): ScrapeSource[];
   findEnabled(): ScrapeSource[];
   findById(id: number): ScrapeSource | null;
   findByUrl(url: string): ScrapeSource | null;
@@ -64,6 +65,12 @@ export function createScrapeSourceRepository(
     ORDER BY id ASC
   `);
 
+  const findAllStatement = database.prepare<[], ScrapeSourceRow>(`
+    SELECT id, name, url, enabled, created_at, updated_at
+    FROM scrape_sources
+    ORDER BY id ASC
+  `);
+
   const findByUrlStatement = database.prepare<string, ScrapeSourceRow>(`
     SELECT id, name, url, enabled, created_at, updated_at
     FROM scrape_sources
@@ -85,6 +92,10 @@ export function createScrapeSourceRepository(
       }
 
       return source;
+    },
+
+    findAll() {
+      return findAllStatement.all().map(toScrapeSource);
     },
 
     findEnabled() {

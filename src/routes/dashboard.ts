@@ -109,6 +109,7 @@ function layout(title: string, body: string): string {
       padding: 0 24px;
     }
     .grid { display: grid; gap: 16px; }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .card {
@@ -121,6 +122,7 @@ function layout(title: string, body: string): string {
     .card h2, .card h3 { margin: 0 0 12px; }
     .metric { color: var(--muted); font-size: 13px; }
     .metric strong { display: block; color: var(--text); font-size: 30px; line-height: 1.1; }
+    .table-scroll { overflow-x: auto; }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -147,6 +149,24 @@ function layout(title: string, body: string): string {
     .badge.healthy, .badge.success, .badge.done { background: #dcfce7; color: var(--ok); }
     .badge.degraded, .badge.running { background: #fef3c7; color: var(--warn); }
     .badge.unhealthy, .badge.failed, .badge.todo { background: #fee2e2; color: var(--bad); }
+    .badge.disabled { background: #f1f5f9; color: var(--muted); }
+    .count-list {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .count-item {
+      border-right: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .count-item:last-child { border-right: 0; }
+    .count-item strong {
+      display: block;
+      color: var(--text);
+      font-size: 22px;
+    }
     .actions { display: flex; gap: 8px; flex-wrap: wrap; }
     button {
       border: 0;
@@ -161,7 +181,7 @@ function layout(title: string, body: string): string {
     .section { margin-top: 22px; }
     .empty { color: var(--muted); padding: 18px 0; }
     @media (max-width: 860px) {
-      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .grid-2, .grid-3, .grid-4, .count-list { grid-template-columns: 1fr; }
       table { font-size: 14px; }
     }
   </style>
@@ -169,7 +189,7 @@ function layout(title: string, body: string): string {
 <body>
   <header>
     <h1>cw2.kr Housing Dashboard</h1>
-    <p>더포디엄830 공고 수집, 확인, 신청 상태를 보는 내부 대시보드</p>
+    <p>여러 주거 공고 source의 스크래핑 결과, 확인, 신청 상태를 보는 내부 대시보드</p>
     <nav>
       <a href="/">Overview</a>
       <a href="/housing-posts">Housing posts</a>
@@ -182,14 +202,20 @@ function layout(title: string, body: string): string {
 </html>`;
 }
 
-function renderPostRows(posts: HousingPost[]): string {
+function renderPostRows(
+  posts: HousingPost[],
+  sourcesById: Map<number, ScrapeSource>
+): string {
   if (posts.length === 0) {
-    return `<tr><td colspan="6" class="empty">공고가 없습니다.</td></tr>`;
+    return `<tr><td colspan="7" class="empty">공고가 없습니다.</td></tr>`;
   }
 
   return posts
-    .map(
-      (post) => `<tr>
+    .map((post) => {
+      const sourceName = sourcesById.get(post.sourceId)?.name ?? `source #${post.sourceId}`;
+
+      return `<tr>
+        <td>${escapeHtml(sourceName)}</td>
         <td>
           <a href="${escapeHtml(post.url)}" target="_blank" rel="noreferrer">${escapeHtml(post.title)}</a>
           ${post.isNotice ? `<span class="badge">고정/공지</span>` : ""}
@@ -213,14 +239,14 @@ function renderPostRows(posts: HousingPost[]): string {
             }
           </div>
         </td>
-      </tr>`
-    )
+      </tr>`;
+    })
     .join("");
 }
 
 function renderRunRows(runs: ScrapeRun[], sourcesById: Map<number, ScrapeSource>): string {
   if (runs.length === 0) {
-    return `<tr><td colspan="5" class="empty">실행 이력이 없습니다.</td></tr>`;
+    return `<tr><td colspan="10" class="empty">실행 이력이 없습니다.</td></tr>`;
   }
 
   return runs
@@ -231,11 +257,71 @@ function renderRunRows(runs: ScrapeRun[], sourcesById: Map<number, ScrapeSource>
         <td>#${run.id}</td>
         <td>${escapeHtml(sourceName)}</td>
         <td><span class="badge ${run.status}">${escapeHtml(run.status)}</span></td>
+        <td>${run.foundCount}</td>
+        <td>${run.newCount}</td>
+        <td>${run.updatedCount}</td>
+        <td>${run.duplicateCount}</td>
+        <td>${run.notificationErrorMessage ? `<span class="badge failed">알림 오류</span>` : `<span class="badge done">OK</span>`}</td>
         <td>${formatDate(run.startedAt)}</td>
-        <td>${run.errorMessage ? escapeHtml(run.errorMessage) : "—"}</td>
+        <td>${run.errorMessage || run.notificationErrorMessage ? escapeHtml(run.errorMessage ?? run.notificationErrorMessage ?? "") : "—"}</td>
       </tr>`;
     })
     .join("");
+}
+
+function renderSourceRows(
+  sources: ScrapeSource[],
+  latestRunBySourceId: Map<number, ScrapeRun>,
+  service: ReturnType<typeof createScrapeService>
+): string {
+  if (sources.length === 0) {
+    return `<tr><td colspan="8" class="empty">등록된 source가 없습니다. CLI에서 seed 명령을 먼저 실행하세요.</td></tr>`;
+  }
+
+  return sources
+    .map((source) => {
+      const health = service.getSourceHealth(source.id);
+      const latestRun = latestRunBySourceId.get(source.id);
+
+      return `<tr>
+        <td>
+          <strong>${escapeHtml(source.name)}</strong>
+          <div class="muted">${escapeHtml(source.url)}</div>
+        </td>
+        <td>${source.enabled ? `<span class="badge done">활성</span>` : `<span class="badge disabled">비활성</span>`}</td>
+        <td><span class="badge ${health}">${statusLabels[health]}</span></td>
+        <td>${latestRun ? `<span class="badge ${latestRun.status}">${latestRun.status}</span>` : "—"}</td>
+        <td>${latestRun?.foundCount ?? 0}</td>
+        <td>${latestRun?.newCount ?? 0}</td>
+        <td>${latestRun?.updatedCount ?? 0}</td>
+        <td>${latestRun ? formatDate(latestRun.startedAt) : "—"}</td>
+      </tr>`;
+    })
+    .join("");
+}
+
+function renderLatestRunSummary(
+  latestRun: ScrapeRun | undefined,
+  sourcesById: Map<number, ScrapeSource>
+): string {
+  if (!latestRun) {
+    return `<p class="empty">아직 scrape 실행 이력이 없습니다.</p>`;
+  }
+
+  const sourceName = sourcesById.get(latestRun.sourceId)?.name ?? `source #${latestRun.sourceId}`;
+
+  return `<p class="muted">최근 실행 · ${escapeHtml(sourceName)} · ${formatDate(latestRun.startedAt)}</p>
+    <p><span class="badge ${latestRun.status}">${latestRun.status}</span> ${
+      latestRun.notificationErrorMessage
+        ? `<span class="badge failed">알림 오류</span>`
+        : `<span class="badge done">알림 OK</span>`
+    }</p>
+    <div class="count-list">
+      <div class="count-item"><strong>${latestRun.foundCount}</strong>발견</div>
+      <div class="count-item"><strong>${latestRun.newCount}</strong>신규</div>
+      <div class="count-item"><strong>${latestRun.updatedCount}</strong>업데이트</div>
+      <div class="count-item"><strong>${latestRun.duplicateCount}</strong>중복</div>
+    </div>`;
 }
 
 export async function registerDashboardRoutes(
@@ -245,43 +331,57 @@ export async function registerDashboardRoutes(
   const service = createScrapeService(repositories);
 
   app.get("/", async (_request, reply) => {
-    const sources = repositories.sources.findEnabled();
-    const recentPosts = repositories.housingPosts.findRecent(5);
+    const sources = repositories.sources.findAll();
+    const enabledSources = sources.filter((source) => source.enabled);
+    const recentPosts = repositories.housingPosts.findRecent(8);
     const uncheckedPosts = repositories.housingPosts.findUnchecked(5);
-    const runs = repositories.runs.findRecent(5);
+    const runs = repositories.runs.findRecent(8);
     const sourcesById = new Map(sources.map((source) => [source.id, source]));
+    const latestRunBySourceId = new Map<number, ScrapeRun>();
+
+    for (const run of runs) {
+      if (!latestRunBySourceId.has(run.sourceId)) {
+        latestRunBySourceId.set(run.sourceId, run);
+      }
+    }
+
+    const latestRun = runs.find((run) => run.status === "success") ?? runs[0];
 
     return reply.type("text/html").send(
       layout(
         "Overview",
-        `<section class="grid grid-3">
-          <div class="card metric"><strong>${sources.length}</strong>enabled sources</div>
-          <div class="card metric"><strong>${uncheckedPosts.length}</strong>unchecked recent posts</div>
-          <div class="card metric"><strong>${runs.length}</strong>recent runs shown</div>
+        `<section class="grid grid-4">
+          <div class="card metric"><strong>${sources.length}</strong>total sources</div>
+          <div class="card metric"><strong>${enabledSources.length}</strong>enabled sources</div>
+          <div class="card metric"><strong>${recentPosts.length}</strong>recent posts shown</div>
+          <div class="card metric"><strong>${uncheckedPosts.length}</strong>unchecked posts</div>
         </section>
         <section class="grid grid-2 section">
           <div class="card">
-            <h2>Source status</h2>
-            ${
-              sources.length === 0
-                ? `<p class="empty">활성 source가 없습니다. <code>npm run sources:seed:thepodium</code>을 먼저 실행하세요.</p>`
-                : sources
-                    .map((source) => {
-                      const health = service.getSourceHealth(source.id);
-
-                      return `<p><span class="badge ${health}">${statusLabels[health]}</span> ${escapeHtml(source.name)}</p>`;
-                    })
-                    .join("")
-            }
+            <h2>스크래핑 결과</h2>
+            ${renderLatestRunSummary(latestRun, sourcesById)}
           </div>
           <div class="card">
-            <h2>Recent runs</h2>
-            <table><thead><tr><th>ID</th><th>Source</th><th>Status</th><th>Started</th><th>Error</th></tr></thead><tbody>${renderRunRows(runs, sourcesById)}</tbody></table>
+            <h2>Scrape sources</h2>
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th>Source</th><th>Enabled</th><th>Health</th><th>Last run</th><th>Found</th><th>New</th><th>Updated</th><th>Started</th></tr></thead>
+                <tbody>${renderSourceRows(sources, latestRunBySourceId, service)}</tbody>
+              </table>
+            </div>
           </div>
         </section>
         <section class="card section">
           <h2>Recent housing posts</h2>
-          <table><thead><tr><th>Title</th><th>Posted</th><th>Notify</th><th>Checked</th><th>Submitted</th><th>Actions</th></tr></thead><tbody>${renderPostRows(recentPosts)}</tbody></table>
+          <div class="table-scroll">
+            <table><thead><tr><th>Source</th><th>Title</th><th>Posted</th><th>Notify</th><th>Checked</th><th>Submitted</th><th>Actions</th></tr></thead><tbody>${renderPostRows(recentPosts, sourcesById)}</tbody></table>
+          </div>
+        </section>
+        <section class="card section">
+          <h2>Recent scrape runs</h2>
+          <div class="table-scroll">
+            <table><thead><tr><th>ID</th><th>Source</th><th>Status</th><th>Found</th><th>New</th><th>Updated</th><th>Dup</th><th>Notify</th><th>Started</th><th>Issue</th></tr></thead><tbody>${renderRunRows(runs, sourcesById)}</tbody></table>
+          </div>
         </section>`
       )
     );
@@ -289,21 +389,25 @@ export async function registerDashboardRoutes(
 
   app.get("/housing-posts", async (_request, reply) => {
     const posts = repositories.housingPosts.findRecent(50);
+    const sources = repositories.sources.findAll();
+    const sourcesById = new Map(sources.map((source) => [source.id, source]));
 
     return reply.type("text/html").send(
       layout(
         "Housing posts",
         `<section class="card">
           <h2>Housing posts</h2>
-          <p class="muted">최근 50개 공고입니다. 확인/신청 상태는 이 페이지에서만 관리하고, 실제 신청은 외부에서 진행합니다.</p>
-          <table><thead><tr><th>Title</th><th>Posted</th><th>Notify</th><th>Checked</th><th>Submitted</th><th>Actions</th></tr></thead><tbody>${renderPostRows(posts)}</tbody></table>
+          <p class="muted">모든 source에서 수집된 최근 50개 공고입니다. 확인/신청 상태는 이 페이지에서만 관리하고, 실제 신청은 외부에서 진행합니다.</p>
+          <div class="table-scroll">
+            <table><thead><tr><th>Source</th><th>Title</th><th>Posted</th><th>Notify</th><th>Checked</th><th>Submitted</th><th>Actions</th></tr></thead><tbody>${renderPostRows(posts, sourcesById)}</tbody></table>
+          </div>
         </section>`
       )
     );
   });
 
   app.get("/runs", async (_request, reply) => {
-    const sources = repositories.sources.findEnabled();
+    const sources = repositories.sources.findAll();
     const sourcesById = new Map(sources.map((source) => [source.id, source]));
     const runs = repositories.runs.findRecent(50);
 
@@ -312,8 +416,10 @@ export async function registerDashboardRoutes(
         "Scrape runs",
         `<section class="card">
           <h2>Scrape runs</h2>
-          <p class="muted">최근 50개 scrape 실행 기록입니다.</p>
-          <table><thead><tr><th>ID</th><th>Source</th><th>Status</th><th>Started</th><th>Error</th></tr></thead><tbody>${renderRunRows(runs, sourcesById)}</tbody></table>
+          <p class="muted">최근 50개 scrape 실행 기록과 수집 결과입니다.</p>
+          <div class="table-scroll">
+            <table><thead><tr><th>ID</th><th>Source</th><th>Status</th><th>Found</th><th>New</th><th>Updated</th><th>Dup</th><th>Notify</th><th>Started</th><th>Issue</th></tr></thead><tbody>${renderRunRows(runs, sourcesById)}</tbody></table>
+          </div>
         </section>`
       )
     );

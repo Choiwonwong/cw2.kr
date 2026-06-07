@@ -54,6 +54,21 @@ describe("scrape source repository", () => {
     );
   });
 
+  it("finds all sources regardless of enabled state", () => {
+    const repository = createScrapeSourceRepository(database);
+    const enabled = repository.create({ name: "enabled", url: "https://enabled.example" });
+    const disabled = repository.create({
+      name: "disabled",
+      url: "https://disabled.example",
+      enabled: false
+    });
+
+    assert.deepEqual(
+      repository.findAll().map((source) => source.id),
+      [enabled.id, disabled.id]
+    );
+  });
+
   it("finds a source by URL", () => {
     const repository = createScrapeSourceRepository(database);
     const source = repository.create({

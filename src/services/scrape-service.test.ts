@@ -74,6 +74,18 @@ describe("scrape service", () => {
       runs.map((run) => run.status),
       ["success", "success"]
     );
+    assert.deepEqual(
+      runs.map((run) => ({
+        found: run.foundCount,
+        new: run.newCount,
+        updated: run.updatedCount,
+        duplicates: run.duplicateCount
+      })),
+      [
+        { found: 2, new: 0, updated: 0, duplicates: 2 },
+        { found: 2, new: 2, updated: 0, duplicates: 0 }
+      ]
+    );
   });
 
   it("updates changed duplicate housing posts and reports them separately", async () => {

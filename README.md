@@ -82,6 +82,10 @@ http://127.0.0.1:3000/housing-posts
 http://127.0.0.1:3000/runs
 ```
 
+The dashboard shows scrape sources, source health, per-run scrape result counts
+(`found`, `new`, `updated`, `duplicates`), recent housing posts, notification
+state, and checked/submitted tracking state.
+
 Send a standalone Discord alert to verify webhook configuration:
 
 ```bash

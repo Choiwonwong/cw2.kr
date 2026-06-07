@@ -121,7 +121,13 @@ export function createScrapeService(
           }
         }
 
-        const finishedRun = repositories.runs.markSuccess(run.id);
+        const finishedRun = repositories.runs.markSuccess(run.id, {
+          foundCount: scrapedPosts.length,
+          newCount: newPosts.length,
+          updatedCount,
+          duplicateCount,
+          notificationErrorMessage
+        });
 
         return {
           run: finishedRun,

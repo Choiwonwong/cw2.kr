@@ -46,7 +46,12 @@ describe("dashboard routes", () => {
       url: "https://example.com/source"
     });
     const run = repositories.runs.create(source.id);
-    repositories.runs.markSuccess(run.id);
+    repositories.runs.markSuccess(run.id, {
+      foundCount: 16,
+      newCount: 1,
+      updatedCount: 2,
+      duplicateCount: 13
+    });
     repositories.housingPosts.insertIfNew({
       sourceId: source.id,
       firstSeenRunId: run.id,
@@ -67,6 +72,32 @@ describe("dashboard routes", () => {
     assert.match(response.body, /더포디엄830 공지사항/);
     assert.match(response.body, /신규 공고/);
     assert.match(response.body, /정상/);
+    assert.match(response.body, /Scrape sources/);
+    assert.match(response.body, /발견/);
+    assert.match(response.body, /업데이트/);
+    assert.match(response.body, /13/);
+  });
+
+  it("renders disabled sources alongside enabled sources", async () => {
+    repositories.sources.create({
+      name: "enabled source",
+      url: "https://example.com/enabled"
+    });
+    repositories.sources.create({
+      name: "disabled source",
+      url: "https://example.com/disabled",
+      enabled: false
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/"
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.match(response.body, /enabled source/);
+    assert.match(response.body, /disabled source/);
+    assert.match(response.body, /비활성/);
   });
 
   it("renders housing posts and marks checked/submitted through form endpoints", async () => {

@@ -28,6 +28,11 @@ describe("scrape run repository", () => {
     assert.equal(run.sourceId, source.id);
     assert.equal(run.status, "running");
     assert.equal(run.errorMessage, null);
+    assert.equal(run.foundCount, 0);
+    assert.equal(run.newCount, 0);
+    assert.equal(run.updatedCount, 0);
+    assert.equal(run.duplicateCount, 0);
+    assert.equal(run.notificationErrorMessage, null);
     assert.equal(typeof run.startedAt, "string");
     assert.equal(run.finishedAt, null);
   });
@@ -38,10 +43,21 @@ describe("scrape run repository", () => {
     const source = sourceRepository.create({ name: "source", url: "https://example.com" });
     const run = runRepository.create(source.id);
 
-    const updated = runRepository.markSuccess(run.id);
+    const updated = runRepository.markSuccess(run.id, {
+      foundCount: 16,
+      newCount: 1,
+      updatedCount: 2,
+      duplicateCount: 13,
+      notificationErrorMessage: "Discord failed"
+    });
 
     assert.equal(updated.status, "success");
     assert.equal(updated.errorMessage, null);
+    assert.equal(updated.foundCount, 16);
+    assert.equal(updated.newCount, 1);
+    assert.equal(updated.updatedCount, 2);
+    assert.equal(updated.duplicateCount, 13);
+    assert.equal(updated.notificationErrorMessage, "Discord failed");
     assert.equal(typeof updated.finishedAt, "string");
   });
 

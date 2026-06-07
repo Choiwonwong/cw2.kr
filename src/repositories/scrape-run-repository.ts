@@ -7,6 +7,11 @@ export type ScrapeRun = {
   sourceId: number;
   status: ScrapeRunStatus;
   errorMessage: string | null;
+  foundCount: number;
+  newCount: number;
+  updatedCount: number;
+  duplicateCount: number;
+  notificationErrorMessage: string | null;
   startedAt: string;
   finishedAt: string | null;
   createdAt: string;
@@ -17,14 +22,27 @@ type ScrapeRunRow = {
   source_id: number;
   status: ScrapeRunStatus;
   error_message: string | null;
+  found_count: number;
+  new_count: number;
+  updated_count: number;
+  duplicate_count: number;
+  notification_error_message: string | null;
   started_at: string;
   finished_at: string | null;
   created_at: string;
 };
 
+export type MarkScrapeRunSuccessInput = {
+  foundCount?: number;
+  newCount?: number;
+  updatedCount?: number;
+  duplicateCount?: number;
+  notificationErrorMessage?: string | null;
+};
+
 export type ScrapeRunRepository = {
   create(sourceId: number): ScrapeRun;
-  markSuccess(id: number): ScrapeRun;
+  markSuccess(id: number, input?: MarkScrapeRunSuccessInput): ScrapeRun;
   markFailed(id: number, errorMessage: string): ScrapeRun;
   findById(id: number): ScrapeRun | null;
   findRecent(limit: number): ScrapeRun[];
@@ -37,6 +55,11 @@ function toScrapeRun(row: ScrapeRunRow): ScrapeRun {
     sourceId: row.source_id,
     status: row.status,
     errorMessage: row.error_message,
+    foundCount: row.found_count,
+    newCount: row.new_count,
+    updatedCount: row.updated_count,
+    duplicateCount: row.duplicate_count,
+    notificationErrorMessage: row.notification_error_message,
     startedAt: row.started_at,
     finishedAt: row.finished_at,
     createdAt: row.created_at
@@ -53,8 +76,16 @@ export function createScrapeRunRepository(
 
   const markSuccessStatement = database.prepare(`
     UPDATE scrape_runs
-    SET status = 'success', error_message = NULL, finished_at = CURRENT_TIMESTAMP
-    WHERE id = ?
+    SET
+      status = 'success',
+      error_message = NULL,
+      found_count = @foundCount,
+      new_count = @newCount,
+      updated_count = @updatedCount,
+      duplicate_count = @duplicateCount,
+      notification_error_message = @notificationErrorMessage,
+      finished_at = CURRENT_TIMESTAMP
+    WHERE id = @id
   `);
 
   const markFailedStatement = database.prepare(`
@@ -64,13 +95,37 @@ export function createScrapeRunRepository(
   `);
 
   const findByIdStatement = database.prepare<number, ScrapeRunRow>(`
-    SELECT id, source_id, status, error_message, started_at, finished_at, created_at
+    SELECT
+      id,
+      source_id,
+      status,
+      error_message,
+      found_count,
+      new_count,
+      updated_count,
+      duplicate_count,
+      notification_error_message,
+      started_at,
+      finished_at,
+      created_at
     FROM scrape_runs
     WHERE id = ?
   `);
 
   const findRecentBySourceStatement = database.prepare<[number, number], ScrapeRunRow>(`
-    SELECT id, source_id, status, error_message, started_at, finished_at, created_at
+    SELECT
+      id,
+      source_id,
+      status,
+      error_message,
+      found_count,
+      new_count,
+      updated_count,
+      duplicate_count,
+      notification_error_message,
+      started_at,
+      finished_at,
+      created_at
     FROM scrape_runs
     WHERE source_id = ?
     ORDER BY id DESC
@@ -78,7 +133,19 @@ export function createScrapeRunRepository(
   `);
 
   const findRecentStatement = database.prepare<number, ScrapeRunRow>(`
-    SELECT id, source_id, status, error_message, started_at, finished_at, created_at
+    SELECT
+      id,
+      source_id,
+      status,
+      error_message,
+      found_count,
+      new_count,
+      updated_count,
+      duplicate_count,
+      notification_error_message,
+      started_at,
+      finished_at,
+      created_at
     FROM scrape_runs
     ORDER BY id DESC
     LIMIT ?
@@ -101,8 +168,15 @@ export function createScrapeRunRepository(
       return requireRun(Number(result.lastInsertRowid));
     },
 
-    markSuccess(id) {
-      markSuccessStatement.run(id);
+    markSuccess(id, input = {}) {
+      markSuccessStatement.run({
+        id,
+        foundCount: input.foundCount ?? 0,
+        newCount: input.newCount ?? 0,
+        updatedCount: input.updatedCount ?? 0,
+        duplicateCount: input.duplicateCount ?? 0,
+        notificationErrorMessage: input.notificationErrorMessage ?? null
+      });
 
       return requireRun(id);
     },
